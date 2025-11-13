@@ -2,9 +2,9 @@ use framespector::network::setup;
 use framespector::network::socket::Socket;
 
 fn main() {
-    if let Err(e) = setup::create_veth() {
+    if let Err(e) = setup_network() {
         eprintln!("{e}");
-        return;
+        std::process::exit(1);
     }
 
     let _sockfd = match Socket::new() {
@@ -16,4 +16,9 @@ fn main() {
     };
 
     println!("Socket created");
+}
+
+fn setup_network() -> Result<(), Box<dyn std::error::Error>> {
+    setup::create_veth()?;
+    Ok(())
 }

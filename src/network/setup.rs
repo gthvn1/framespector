@@ -1,19 +1,39 @@
-use crate::network::error;
+use std::fmt;
 use std::process::Command;
 
-fn run_command(cmd: &str, args: &[&str]) -> Result<(), error::NetworkError> {
-    let output =
-        Command::new(cmd)
-            .args(args)
-            .output()
-            .map_err(|_| error::NetworkError::CommandFailed {
-                cmd: cmd.to_string(),
-                msg: None,
-            })?;
+#[derive(Debug)]
+pub enum SetupError {
+    CommandFailed { cmd: String, msg: Option<String> },
+}
+
+impl fmt::Display for SetupError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SetupError::CommandFailed { cmd, msg } => {
+                if let Some(m) = msg {
+                    write!(f, "command '{cmd}' failed: {m}")
+                } else {
+                    write!(f, "command '{cmd}' failed")
+                }
+            }
+        }
+    }
+}
+
+impl std::error::Error for SetupError {}
+
+fn run_command(cmd: &str, args: &[&str]) -> Result<(), SetupError> {
+    let output = Command::new(cmd)
+        .args(args)
+        .output()
+        .map_err(|_| SetupError::CommandFailed {
+            cmd: cmd.to_string(),
+            msg: None,
+        })?;
 
     if !output.status.success() {
         let msg = format!("{}", String::from_utf8_lossy(&output.stderr),);
-        return Err(error::NetworkError::CommandFailed {
+        return Err(SetupError::CommandFailed {
             cmd: cmd.to_string(),
             msg: Some(msg),
         });
@@ -23,7 +43,7 @@ fn run_command(cmd: &str, args: &[&str]) -> Result<(), error::NetworkError> {
 }
 
 // This create virtual pair
-pub fn create_veth() -> Result<(), error::NetworkError> {
+pub fn create_veth() -> Result<(), SetupError> {
     run_command(
         "ip",
         &[
