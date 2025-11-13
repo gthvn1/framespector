@@ -7,18 +7,14 @@ fn main() {
         std::process::exit(1);
     }
 
-    let _sockfd = match Socket::new() {
-        Ok(sockfd) => sockfd,
-        Err(e) => {
-            println!("{e}");
-            return;
-        }
-    };
-
-    println!("Socket created");
+    println!("Network setup done");
 }
 
-fn setup_network() -> Result<(), Box<dyn std::error::Error>> {
+fn setup_network() -> Result<Socket, Box<dyn std::error::Error>> {
     setup::create_veth()?;
-    Ok(())
+
+    let sockfd = Socket::new()?;
+    println!("Socket created");
+
+    Ok(sockfd)
 }
