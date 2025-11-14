@@ -1,0 +1,132 @@
+// examples/af_packet_raw.go
+//
+// Minimal AF_PACKET raw socket example for Linux.
+// Build: go build ./examples/af_packet_raw.go
+// Run: sudo ./af_packet_raw <ifname>
+// Requires Linux and CAP_NET_RAW / root.
+
+package main
+
+import (
+	"encoding/binary"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"golang.org/x/sys/unix"
+)
+
+// htons converts host to network byte order (uint16).
+func htons(i uint16) uint16 { return (i<<8 | i>>8) }
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s <interface>\n", os.Args[0])
+		os.Exit(2)
+	}
+	ifName := os.Args[1]
+
+	// get interface info
+	ifi, err := net.InterfaceByName(ifName)
+	if err != nil {
+		log.Fatalf("InterfaceByName(%s): %v", ifName, err)
+	}
+	ifiIndex := ifi.Index
+	ifiHW := ifi.HardwareAddr
+	if len(ifiHW) < 6 {
+		log.Fatalf("interface %s has no MAC", ifName)
+	}
+	log.Printf("Using iface %s idx=%d mac=%s\n", ifName, ifiIndex, ifiHW.String())
+
+	// Create raw AF_PACKET socket (ETH_P_ALL)
+	proto := htons(unix.ETH_P_ALL) // network byte order
+	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_RAW, int(proto))
+	if err != nil {
+		log.Fatalf("socket: %v (are you root?)", err)
+	}
+	defer unix.Close(fd)
+
+	// Bind to the interface
+	sll := &unix.SockaddrLinklayer{
+		Protocol: proto,
+		Ifindex:  ifiIndex,
+	}
+	if err := unix.Bind(fd, sll); err != nil {
+		log.Fatalf("bind: %v", err)
+	}
+	log.Printf("Bound AF_PACKET socket to %s\n", ifName)
+
+	// install signal handler to quit cleanly
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+
+	// start receiver goroutine
+	recvDone := make(chan struct{})
+	go func() {
+		defer close(recvDone)
+		buf := make([]byte, 65536)
+		for {
+			n, from, err := unix.Recvfrom(fd, buf, 0)
+			if err != nil {
+				// when socket closed, Recvfrom returns EBADF or EINVAL
+				log.Printf("recv error: %v", err)
+				return
+			}
+			// optional: inspect 'from' (SockaddrLinklayer)
+			if n < 14 {
+				continue
+			}
+			frame := buf[:n]
+			dst := net.HardwareAddr(frame[0:6])
+			src := net.HardwareAddr(frame[6:12])
+			ethType := binary.BigEndian.Uint16(frame[12:14])
+			payload := frame[14:]
+
+			fmt.Printf("--- RX %d bytes ---\n", n)
+			fmt.Printf("From: %+v\n", from)
+			fmt.Printf("Dst: %s\n", dst)
+			fmt.Printf("Src: %s\n", src)
+			fmt.Printf("Ethertype: 0x%04x\n", ethType)
+			fmt.Printf("Payload (%d): % x\n\n", len(payload), payload)
+		}
+	}()
+
+	// Example send: build a simple Ethernet frame and transmit once.
+	// Destination: broadcast ff:ff:ff:ff:ff:ff
+	dstMAC := net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	srcMAC := ifiHW[:6]
+	ethType := uint16(0x0800) // example: IPv4 ethertype
+	payload := []byte("hello-from-af_packet-go")
+
+	frame := make([]byte, 14+len(payload))
+	copy(frame[0:6], dstMAC)
+	copy(frame[6:12], srcMAC)
+	binary.BigEndian.PutUint16(frame[12:14], ethType)
+	copy(frame[14:], payload)
+
+	// For SockaddrLinklayer, set destination addr and halen
+	sendSLL := &unix.SockaddrLinklayer{
+		Ifindex:  ifiIndex,
+		Halen:    6,
+		Protocol: proto,
+	}
+	// copy MAC into Addr field (Addr is [8]uint8)
+	copy(sendSLL.Addr[:], dstMAC)
+
+	// send the frame
+	if err := unix.Sendto(fd, frame, 0, sendSLL); err != nil {
+		log.Printf("Sendto error: %v", err)
+	} else {
+		log.Printf("Sent %d bytes on %s -> dst %s", len(frame), ifName, dstMAC)
+	}
+
+	// wait for signal to exit (or Ctrl-C)
+	<-sigc
+	log.Println("shutting down...")
+	unix.Close(fd)
+	<-recvDone
+}
+
