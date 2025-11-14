@@ -5,6 +5,11 @@ to program in Go.
 
 ## Links
 
+- https://pkg.go.dev/std
+- https://gobyexample.com/
+- https://go.dev/doc/
+- https://go.dev/doc/tutorial/handle-errors
+
 ### Raw Sockets
 
 ## POSIX Signals

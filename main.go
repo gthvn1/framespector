@@ -2,10 +2,17 @@ package main
 
 import (
 	"example.com/framespector/network"
-	"fmt"
+	"log"
 )
 
 func main() {
-	fmt.Println("Hello, Sailor")
-	network.SetupNetwork()
+	log.SetPrefix("framespector: ")
+	log.SetFlags(0)
+
+	if err := network.SetupNetwork("veth0"); err != nil {
+		log.Fatal(err)
+	}
+	defer network.CleanupNetorwk("veth0")
+
+	log.Println("Setup network done")
 }
