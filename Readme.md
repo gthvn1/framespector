@@ -4,7 +4,7 @@ to program in Go.
 ## Tools we are using
 - [Download GO](https://go.dev/dl/)
 - [GoPLS](https://go.dev/gopls/)
-- [Staticheck](https://staticcheck.dev/)
+- [Staticcheck](https://staticcheck.dev/)
 - [Goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
 - [Delve](https://github.com/go-delve/delve)
 - We use [air](https://github.com/air-verse/air) for quick feedback
