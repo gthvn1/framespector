@@ -2,17 +2,53 @@ package main
 
 import (
 	"example.com/framespector/network"
+	"flag"
+	"fmt"
 	"log"
+	"time"
 )
 
 func main() {
 	log.SetPrefix("framespector: ")
 	log.SetFlags(0)
 
-	if err := network.SetupNetwork("veth0"); err != nil {
+	args := ReadArgs()
+	if args == nil {
+		return
+	}
+
+	if err := network.SetupNetwork(args.Veth); err != nil {
 		log.Fatal(err)
 	}
-	defer network.CleanupNetorwk("veth0")
+	defer network.CleanupNetorwk(args.Veth)
 
-	log.Println("Setup network done")
+	log.Println("Setup network done. Waiting 5 seconds before closing...")
+	time.Sleep(5 * time.Second)
+
+}
+
+type Args struct {
+	Veth string
+	IP   string
+}
+
+func ReadArgs() *Args {
+	// We are expecting --veth <ifacename> and --ip <x.x.x.x/yy>
+	// So the virtual pair name and the ip with its subnet
+	veth_name := flag.String("veth", "veth0", "Virtual Pair name")
+	ip := flag.String("ip", "192.168.35/24", "IP address with CIDR")
+	help := flag.Bool("help", false, "Print help")
+
+	flag.Parse()
+
+	if *help {
+		fmt.Println("Usage: framespector --veth <veth-name> --ip <ip/cidr>")
+		flag.PrintDefaults()
+		return nil
+	}
+
+	return &Args{
+		Veth: *veth_name,
+		IP:   *ip,
+	}
 }

@@ -8,6 +8,7 @@ import (
 
 func SetupNetwork(name string) error {
 	peer := name + "-peer"
+
 	cmd := exec.Command("ip", "link", "add", name, "type", "veth", "peer", "name", peer)
 
 	output, err := cmd.CombinedOutput()
@@ -15,10 +16,25 @@ func SetupNetwork(name string) error {
 		return fmt.Errorf("Failed to run command %q\nerror: %w\noutput: %s", cmd.String(), err, output)
 	}
 
-	log.Printf("Successfully run %q", cmd.String())
+	// Just return in case of error when setting links up.
+
+	if exec.Command("ip", "link", "set", name, "up").Run() != nil {
+		return fmt.Errorf("Failed to set link %s down\n", name)
+	}
+
+	if exec.Command("ip", "link", "set", peer, "up").Run() != nil {
+		return fmt.Errorf("Failed to set link %s down\n", peer)
+	}
+
 	return nil
 }
 
 func CleanupNetorwk(name string) {
-	log.Printf("TODO: really clean up things for %s", name)
+	if exec.Command("ip", "link", "set", name, "down").Run() != nil {
+		log.Printf("Failed to set link %s down\n", name)
+	}
+
+	if exec.Command("ip", "link", "del", name).Run() != nil {
+		log.Printf("Failed to delete link %s\n", name)
+	}
 }
