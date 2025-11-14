@@ -1,9 +1,12 @@
 Rewrite [network_layers](https://github.com/gthvn1/network_layers) in Go to see how it is
 to program in Go.
 
-## Install
+## Tools we are using
 - [Download GO](https://go.dev/dl/)
-- Install [GoPLS](https://go.dev/gopls/)
+- [GoPLS](https://go.dev/gopls/)
+- [Staticheck](https://staticcheck.dev/)
+- [Goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
+- [Delve](https://github.com/go-delve/delve)
 - We use [air](https://github.com/air-verse/air) for quick feedback
 
 ## Links
