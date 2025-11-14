@@ -3,7 +3,7 @@ to program in Go.
 
 ## Install
 - [Download GO](https://go.dev/dl/)
-- Install [GoPls](https://go.dev/gopls/)
+- Install [GoPLS](https://go.dev/gopls/)
 - We use [air](https://github.com/air-verse/air) for quick feedback
 
 ## Links
