@@ -27,7 +27,19 @@ func main() {
 	}
 	defer veth.Cleanup()
 
-	log.Println("Setup network done. Waiting 5 seconds before closing...")
+	if err := veth.CreateSocket(); err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	if err := veth.BindPeer(); err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	log.Println("Setup network done.")
+	log.Println("TODO: listen on the socket")
+	log.Println("Waiting 5 seconds before closing...")
 	time.Sleep(5 * time.Second)
 }
 
