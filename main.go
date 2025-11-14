@@ -1,11 +1,13 @@
 package main
 
 import (
-	"example.com/framespector/network"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
+
+	"example.com/framespector/network"
 )
 
 func main() {
@@ -17,14 +19,16 @@ func main() {
 		return
 	}
 
-	if err := network.SetupNetwork(args.Veth); err != nil {
-		log.Fatal(err)
+	veth := network.NewVeth(args.Veth)
+
+	if err := veth.Setup(); err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
-	defer network.CleanupNetorwk(args.Veth)
+	defer veth.Cleanup()
 
 	log.Println("Setup network done. Waiting 5 seconds before closing...")
 	time.Sleep(5 * time.Second)
-
 }
 
 type Args struct {

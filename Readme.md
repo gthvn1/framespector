@@ -15,6 +15,8 @@ to program in Go.
 
 ### Raw Sockets
 
+- To access raw syscall we use [sys/unix](https://pkg.go.dev/golang.org/x/sys/unix)
+
 ## POSIX Signals
 
 ## Polling (epoll/select)
