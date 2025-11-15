@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
 	"example.com/framespector/network"
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -41,9 +44,53 @@ func main() {
 	}
 
 	logger.Info("Setup network done")
-	logger.Info("TODO: listen on the socket")
-	logger.Info("Waiting 5 seconds before closing...")
-	time.Sleep(5 * time.Second)
+
+	// To be able to quit the loop using ctrl-c we create a channel
+	// of type os.Signal with a size of 1
+	sigChan := make(chan os.Signal, 1)
+	// If ctrl-c is hit sends it to the channel sigChan
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	logger.Info("Hit ctrl-c to quit")
+
+	// start a go routine that will listen on socket
+	ctx, cancel := context.WithCancel(context.Background())
+	go receiveLoop(ctx, veth)
+
+	// and block until ctrl-c is received
+	<-sigChan
+	logger.Info("ctrl-c received, shutting down...")
+
+	// Cancel go routine
+	cancel()
+
+	logger.Info("clean shutdown complete")
+}
+
+func receiveLoop(ctx context.Context, veth *network.Veth) {
+	buf := make([]byte, 4096)
+
+	for {
+		select {
+		case <-ctx.Done():
+			veth.Logger.Info("Stop receiving frame")
+			return
+		default:
+			n, _, err := unix.Recvfrom(veth.FD, buf, 0)
+			if err == unix.EBADF || err == unix.EINVAL {
+				veth.Logger.Error("socket closed")
+				return
+			}
+
+			if err != nil {
+				veth.Logger.Warn("receive error", "err", err)
+				continue
+			}
+
+			veth.Logger.Info("frame received", "bytes", n)
+			// TODO: do something with buf
+		}
+	}
 }
 
 type Args struct {
