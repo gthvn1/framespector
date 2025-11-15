@@ -12,6 +12,7 @@ import (
 type Veth struct {
 	P1name string
 	P2name string
+	IP     string
 	FD     int
 }
 
@@ -21,10 +22,11 @@ func htons(i uint16) uint16 {
 	return (i<<8 | i>>8)
 }
 
-func NewVeth(name string) *Veth {
+func NewVeth(name string, ip string) *Veth {
 	return &Veth{
 		P1name: name,
 		P2name: name + "-peer",
+		IP:     ip,
 		FD:     -1,
 	}
 }
@@ -47,6 +49,11 @@ func (v *Veth) Setup() error {
 	if exec.Command("ip", "link", "set", v.P2name, "up").Run() != nil {
 		v.Cleanup()
 		return fmt.Errorf("failed to set link %s up\n", v.P2name)
+	}
+
+	if exec.Command("ip", "addr", "add", v.IP, "dev", v.P1name).Run() != nil {
+		v.Cleanup()
+		return fmt.Errorf("failed to add %s to %s\n", v.IP, v.P1name)
 	}
 
 	return nil
@@ -74,6 +81,7 @@ func (v *Veth) CreateSocket() error {
 	// On Linux: man packet
 	// => Set protocol to ETH_P_ALL to receive all protocols
 	proto := htons(unix.ETH_P_ALL)
+	log.Printf("proto set to %d\n", proto)
 	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_RAW, int(proto))
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %w", err)

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"time"
 
@@ -19,7 +20,7 @@ func main() {
 		return
 	}
 
-	veth := network.NewVeth(args.Veth)
+	veth := network.NewVeth(args.Veth, args.IP)
 
 	if err := veth.Setup(); err != nil {
 		log.Println(err)
@@ -52,7 +53,7 @@ func ReadArgs() *Args {
 	// We are expecting --veth <ifacename> and --ip <x.x.x.x/yy>
 	// So the virtual pair name and the ip with its subnet
 	veth_name := flag.String("veth", "veth0", "Virtual Pair name")
-	ip := flag.String("ip", "192.168.35/24", "IP address with CIDR")
+	ip := flag.String("ip", "192.168.35.2/24", "IP address with CIDR")
 	help := flag.Bool("help", false, "Print help")
 
 	flag.Parse()
@@ -63,6 +64,10 @@ func ReadArgs() *Args {
 		return nil
 	}
 
+	if _, _, err := net.ParseCIDR(*ip); err != nil {
+		fmt.Printf("%s is not a valid IP address with CIDR\n", *ip)
+		return nil
+	}
 	return &Args{
 		Veth: *veth_name,
 		IP:   *ip,
