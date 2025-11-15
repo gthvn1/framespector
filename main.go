@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"example.com/framespector/network"
@@ -55,7 +56,12 @@ func main() {
 
 	// start a go routine that will listen on socket
 	ctx, cancel := context.WithCancel(context.Background())
-	go receiveLoop(ctx, veth)
+
+	// We need to wait for the go routine to end before closing
+	// socket. So we use WaitGroup to track the go routine
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go receiveLoop(ctx, &wg, veth)
 
 	// and block until ctrl-c is received
 	<-sigChan
@@ -64,10 +70,14 @@ func main() {
 	// Cancel go routine
 	cancel()
 
+	wg.Wait()
 	logger.Info("clean shutdown complete")
 }
 
-func receiveLoop(ctx context.Context, veth *network.Veth) {
+func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
+	// When done signal it
+	defer wg.Done()
+
 	buf := make([]byte, 4096)
 
 	for {
