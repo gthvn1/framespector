@@ -78,6 +78,14 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 	// When done signal it
 	defer wg.Done()
 
+	// We need to poll to avoid blocking on Recvfrom
+	pollFds := []unix.PollFd{
+		{
+			Fd:     int32(veth.FD),
+			Events: unix.POLLIN,
+		},
+	}
+
 	buf := make([]byte, 4096)
 
 	for {
@@ -86,7 +94,20 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			veth.Logger.Info("Stop receiving frame")
 			return
 		default:
-			n, _, err := unix.Recvfrom(veth.FD, buf, 0)
+			// Poll with a timeout of 100ms
+			n, err := unix.Poll(pollFds, 100)
+			if err != nil {
+				veth.Logger.Warn("poll error", "err", err)
+				continue
+			}
+
+			if n == 0 {
+				// We hit the timeout so just continue and we will be able to
+				// check ctx.Done
+				continue
+			}
+
+			n, _, err = unix.Recvfrom(veth.FD, buf, 0)
 			if err == unix.EBADF || err == unix.EINVAL {
 				veth.Logger.Error("socket closed")
 				return
