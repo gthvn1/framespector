@@ -90,6 +90,7 @@ func (v *Veth) CreateSocket() error {
 	}
 
 	v.FD = fd
+	v.Logger.Debug("Virtual pair socket created")
 	return nil
 }
 
@@ -113,5 +114,6 @@ func (v *Veth) BindPeer() error {
 		return fmt.Errorf("failed to bind socket: %w", err)
 	}
 
+	v.Logger.Debug("Bind done", "iface", v.P2name)
 	return nil
 }
