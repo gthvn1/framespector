@@ -86,7 +86,7 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 		},
 	}
 
-	buf := make([]byte, 4096)
+	rawFrame := make([]byte, 4096)
 
 	for {
 		select {
@@ -107,7 +107,7 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 				continue
 			}
 
-			n, _, err = unix.Recvfrom(veth.FD, buf, 0)
+			n, _, err = unix.Recvfrom(veth.FD, rawFrame, 0)
 			if err == unix.EBADF || err == unix.EINVAL {
 				veth.Logger.Error("socket closed")
 				return
@@ -119,7 +119,7 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			}
 
 			veth.Logger.Info("frame received", "bytes", n)
-			// TODO: do something with buf
+			network.ParseEthernet(rawFrame[:n])
 		}
 	}
 }
