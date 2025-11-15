@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"time"
@@ -12,35 +12,34 @@ import (
 )
 
 func main() {
-	log.SetPrefix("framespector: ")
-	log.SetFlags(0)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	args := ReadArgs()
 	if args == nil {
 		return
 	}
 
-	veth := network.NewVeth(args.Veth, args.IP)
+	veth := network.NewVeth(logger, args.Veth, args.IP)
 
 	if err := veth.Setup(); err != nil {
-		log.Println(err)
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 	defer veth.Cleanup()
 
 	if err := veth.CreateSocket(); err != nil {
-		log.Println(err)
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 
 	if err := veth.BindPeer(); err != nil {
-		log.Println(err)
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 
-	log.Println("Setup network done.")
-	log.Println("TODO: listen on the socket")
-	log.Println("Waiting 5 seconds before closing...")
+	logger.Info("Setup network done.")
+	logger.Info("TODO: listen on the socket")
+	logger.Info("Waiting 5 seconds before closing...")
 	time.Sleep(5 * time.Second)
 }
 
