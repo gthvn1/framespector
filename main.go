@@ -12,7 +12,10 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, opts))
 
 	args := ReadArgs()
 	if args == nil {
@@ -37,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("Setup network done.")
+	logger.Info("Setup network done")
 	logger.Info("TODO: listen on the socket")
 	logger.Info("Waiting 5 seconds before closing...")
 	time.Sleep(5 * time.Second)
