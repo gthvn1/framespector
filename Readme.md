@@ -1,17 +1,21 @@
-Rewrite [network_layers](https://github.com/gthvn1/network_layers) in Go to see how it is
-to program in Go.
+Rewrite of [network_layers](https://github.com/gthvn1/network_layers) in Go to
+explore how it feels to implement layers in Go.
+
+## Goal
+
+- First goal: reply to ARP request. By default it replies to `arping -c 1 192.168.35.3`
+- Next steps: TBD
 
 ## Build & Run
 
-- `go build .`
-- You need root privileges because program creates a virtual pair socket
+- Build the binary: `go build .`
+- You must run it as root, because program creates a virtual veth pair:
   - `sudo ./framespector --help`
-- Without parameters the prgram will:
-  - Create a **veth0** virtual pair
-  - Add **192.168.35.2/24** to **veth0**
+- Without parameters, the program will:
+  - Create a **veth0** virtual ethernet pair
+  - Assign **192.168.35.2/24** to **veth0**
   - Listen for incoming frames on **veth0-peer**
-- Press `Ctrl-C` to quit, the virtual pair will be cleaned up automatically
-- Currently we only print raw frame but you should see ARP if you do `arping -c 192.168.35.3`
+- Press `Ctrl-C` to quit, the virtual pair is cleaned up automatically.
 
 ```
 ❯ sudo ./framespector
@@ -54,7 +58,3 @@ time=2025-11-16T11:21:14.012+01:00 level=INFO msg="clean shutdown complete"
 ### Raw Sockets
 
 - To access raw syscall we use [sys/unix](https://pkg.go.dev/golang.org/x/sys/unix)
-
-## POSIX Signals
-
-## Polling (epoll/select)
