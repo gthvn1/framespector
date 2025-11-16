@@ -1,9 +1,11 @@
 Rewrite of [network_layers](https://github.com/gthvn1/network_layers) in Go to
 explore how it feels to implement layers in Go.
 
-## Goal
+## Goals
 
-- First goal: reply to ARP request. By default it replies to `arping -c 1 192.168.35.3`
+- [x] reply to ARP request. By default it replies to `arping -c 1 192.168.35.3`
+- [x] parse IPv4 packet
+- [ ] handle ICMP protocol
 - Next steps: TBD
 
 ## Build & Run
