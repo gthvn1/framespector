@@ -26,7 +26,7 @@ func main() {
 		return
 	}
 
-	veth := network.NewVeth(logger, args.Veth, args.IP)
+	veth := network.NewVeth(logger, args.Veth, args.P1IP, args.P2IP)
 
 	if err := veth.Setup(); err != nil {
 		logger.Error(err.Error())
@@ -130,7 +130,43 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			// Dispatch based on the ethernet type
 			switch f.EtherType {
 			case network.EtherTypeARP:
-				network.HandleARP(veth.Logger, f.Payload)
+				// TODO: deal with response
+				// TODO: get the ip of the peer in the parameter
+				peerIP, _, err1 := net.ParseCIDR(veth.PIP)
+				if err1 != nil {
+					veth.Logger.Error("invalid IP", "ip", veth.PIP, "err", err1)
+					continue
+				}
+
+				peerIPv4 := peerIP.To4()
+				if peerIPv4 == nil {
+					veth.Logger.Error("invalid IP", "ip", veth.PIP)
+					continue
+				}
+
+				peerIface, err2 := net.InterfaceByName(veth.P2name)
+				if err2 != nil {
+					veth.Logger.Error("failed to peer interface", "iface", veth.P2name, "err", err2)
+					continue
+				}
+
+				reply, err3 := network.HandleARP(veth.Logger, f.Payload, peerIface.HardwareAddr, peerIPv4)
+				if err3 != nil {
+					veth.Logger.Error("ARP request not handled", "err", err3)
+					continue
+				}
+
+				arpPayload := reply.Marshal()
+				ethFrame := network.BuildEthernetFrame(reply.TargetHA, reply.SenderHA, network.EtherTypeARP, arpPayload)
+
+				// TODO: better handling of veth.SAddr, currently we don't check if it is nil, but we
+				// maybe need to add a method to send it in ethernet.go
+				if err := unix.Sendto(veth.FD, ethFrame, 0, veth.SAddr); err != nil {
+					veth.Logger.Error("failed to send ARP reply", "err", err)
+				} else {
+					veth.Logger.Info("sent ARP reply", "to_mac", reply.TargetHA, "from_mac", reply.SenderHA)
+				}
+
 			case network.EtherTypeIPv4:
 				veth.Logger.Debug("TODO: decode ipv4")
 			case network.EtherTypeIPv6:
@@ -151,30 +187,40 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 
 type Args struct {
 	Veth string
-	IP   string
+	P1IP string
+	P2IP string
 }
 
 func ReadArgs() *Args {
 	// We are expecting --veth <ifacename> and --ip <x.x.x.x/yy>
 	// So the virtual pair name and the ip with its subnet
 	veth_name := flag.String("veth", "veth0", "Virtual Pair name")
-	ip := flag.String("ip", "192.168.35.2/24", "IP address with CIDR")
+	p1ip := flag.String("ip", "192.168.35.2/24", "IP address with CIDR")
+	p2ip := flag.String("peer", "192.168.35.3/24", "IP address of the peer with CIDR")
 	help := flag.Bool("help", false, "Print help")
 
 	flag.Parse()
 
 	if *help {
-		fmt.Println("Usage: framespector --veth <veth-name> --ip <ip/cidr>")
+		fmt.Println("Usage: framespector --veth <veth-name> --ip <ip/cidr> --peer <ip/cidr>")
 		flag.PrintDefaults()
 		return nil
 	}
 
-	if _, _, err := net.ParseCIDR(*ip); err != nil {
-		fmt.Printf("%s is not a valid IP address with CIDR\n", *ip)
+	// Just check that IPs are valid
+	if _, _, err := net.ParseCIDR(*p1ip); err != nil {
+		fmt.Printf("%s is not a valid IP address with CIDR\n", *p1ip)
 		return nil
 	}
+
+	if _, _, err := net.ParseCIDR(*p2ip); err != nil {
+		fmt.Printf("%s is not a valid IP address with CIDR\n", *p2ip)
+		return nil
+	}
+
 	return &Args{
 		Veth: *veth_name,
-		IP:   *ip,
+		P1IP: *p1ip,
+		P2IP: *p2ip,
 	}
 }

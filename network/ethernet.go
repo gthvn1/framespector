@@ -101,6 +101,22 @@ func ParseEthernet(packet []byte) (*EthernetFrame, error) {
 	return f, nil
 }
 
+func BuildEthernetFrame(dst, src net.HardwareAddr, etherType EtherType, payload []byte) []byte {
+	frame := make([]byte, 14+len(payload))
+
+	// MAC addresses
+	copy(frame[0:6], dst)  // destination
+	copy(frame[6:12], src) // source
+
+	// EtherType in big-endian
+	binary.BigEndian.PutUint16(frame[12:14], uint16(etherType))
+
+	// Payload
+	copy(frame[14:], payload)
+
+	return frame
+}
+
 // String returns a human-readable representation
 func (f *EthernetFrame) String() string {
 	return fmt.Sprintf("Ethernet: %s -> %s, Type: %s, Payload: %d bytes",
