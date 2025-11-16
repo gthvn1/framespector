@@ -91,7 +91,7 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 	for {
 		select {
 		case <-ctx.Done():
-			veth.Logger.Info("Stop receiving frame")
+			veth.Logger.Info("stop receiving frame")
 			return
 		default:
 			// Poll with a timeout of 100ms
@@ -119,7 +119,12 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			}
 
 			veth.Logger.Info("frame received", "bytes", n)
-			network.ParseEthernet(rawFrame[:n])
+			f, err := network.ParseEthernet(rawFrame[:n])
+			if err != nil {
+				veth.Logger.Error("failed to decode frame", "err", err)
+			} else {
+				veth.Logger.Debug(f.String())
+			}
 		}
 	}
 }
