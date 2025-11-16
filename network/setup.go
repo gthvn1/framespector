@@ -41,21 +41,27 @@ func stringToIPv4(ipStr string) (net.IP, *net.IPNet, error) {
 	return ipv4, ipNet, nil
 }
 
-func NewVeth(logger *slog.Logger, name string, host string, peer string) (*Veth, error) {
+type VethConf struct {
+	Name      string
+	HostIPStr string
+	PeerIPStr string
+}
 
-	HostIP, HostNet, err1 := stringToIPv4(host)
+func NewVeth(logger *slog.Logger, vc VethConf) (*Veth, error) {
+
+	HostIP, HostNet, err1 := stringToIPv4(vc.HostIPStr)
 	if err1 != nil {
 		return nil, err1
 	}
 
-	PeerIP, PeerNet, err2 := stringToIPv4(peer)
+	PeerIP, PeerNet, err2 := stringToIPv4(vc.PeerIPStr)
 	if err2 != nil {
 		return nil, err2
 	}
 
 	return &Veth{
-		HostName: name,
-		PeerName: name + "-peer",
+		HostName: vc.Name,
+		PeerName: vc.Name + "-peer",
 		HostIP:   HostIP,
 		HostNet:  HostNet,
 		PeerIP:   PeerIP,

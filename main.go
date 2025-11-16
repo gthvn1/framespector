@@ -26,7 +26,13 @@ func main() {
 		return
 	}
 
-	veth, err := network.NewVeth(logger, args.Veth, args.P1IP, args.P2IP)
+	vethConf := network.VethConf{
+		Name:      args.vethName,
+		HostIPStr: args.hostIPStr,
+		PeerIPStr: args.peerIPStr,
+	}
+
+	veth, err := network.NewVeth(logger, vethConf)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -181,17 +187,17 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 }
 
 type Args struct {
-	Veth string
-	P1IP string
-	P2IP string
+	vethName string
+	hostIPStr string
+	peerIPStr string
 }
 
 func ReadArgs() *Args {
 	// We are expecting --veth <ifacename> and --ip <x.x.x.x/yy>
 	// So the virtual pair name and the ip with its subnet
-	veth_name := flag.String("veth", "veth0", "Virtual Pair name")
-	p1ip := flag.String("ip", "192.168.35.2/24", "IP address with CIDR")
-	p2ip := flag.String("peer", "192.168.35.3/24", "IP address of the peer with CIDR")
+	vethName := flag.String("veth", "veth0", "Virtual Pair name")
+	hostIP := flag.String("ip", "192.168.35.2/24", "IP address with CIDR")
+	peerIP := flag.String("peer", "192.168.35.3/24", "IP address of the peer with CIDR")
 	help := flag.Bool("help", false, "Print help")
 
 	flag.Parse()
@@ -203,19 +209,19 @@ func ReadArgs() *Args {
 	}
 
 	// Just check that IPs are valid
-	if _, _, err := net.ParseCIDR(*p1ip); err != nil {
-		fmt.Printf("%s is not a valid IP address with CIDR\n", *p1ip)
+	if _, _, err := net.ParseCIDR(*hostIP); err != nil {
+		fmt.Printf("%s is not a valid IP address with CIDR\n", *hostIP)
 		return nil
 	}
 
-	if _, _, err := net.ParseCIDR(*p2ip); err != nil {
-		fmt.Printf("%s is not a valid IP address with CIDR\n", *p2ip)
+	if _, _, err := net.ParseCIDR(*peerIP); err != nil {
+		fmt.Printf("%s is not a valid IP address with CIDR\n", *peerIP)
 		return nil
 	}
 
 	return &Args{
-		Veth: *veth_name,
-		P1IP: *p1ip,
-		P2IP: *p2ip,
+		vethName: *vethName,
+		hostIPStr: *hostIP,
+		peerIPStr: *peerIP,
 	}
 }
