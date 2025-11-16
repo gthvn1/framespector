@@ -122,9 +122,29 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			f, err := network.ParseEthernet(rawFrame[:n])
 			if err != nil {
 				veth.Logger.Error("failed to decode frame", "err", err)
-			} else {
-				veth.Logger.Debug(f.String())
+				continue
 			}
+
+			veth.Logger.Debug(f.String())
+
+			// Dispatch based on the ethernet type
+			switch f.EtherType {
+			case network.EtherTypeARP:
+				network.HandleARP(veth.Logger, f.Payload)
+			case network.EtherTypeIPv4:
+				veth.Logger.Debug("TODO: decode ipv4")
+			case network.EtherTypeIPv6:
+				veth.Logger.Debug("TODO: decode ipv6")
+			case network.EtherTypeVLAN:
+				veth.Logger.Debug("VLAN frame ignored")
+			case network.EtherTypeUnknown:
+				veth.Logger.Warn("unkown ether type", "type", fmt.Sprintf("0x%04x", f.EtherType))
+			default:
+				// If you are here it is because you modified the EtherType enum and you
+				// don't handle it here.
+				panic(fmt.Sprintf("unhandled EtherType in switch: 0x%04x", f.EtherType))
+			}
+
 		}
 	}
 }
