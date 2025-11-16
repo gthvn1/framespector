@@ -163,6 +163,8 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 	}
 }
 
+// ------------------------------------------------------------------------------
+// ETHERNET FRAME HANDLERS
 func handleIPv6(veth *network.Veth, payload []byte) {
 	_, _ = veth, payload
 	veth.Logger.Debug("TODO: decode ipv6")
@@ -170,8 +172,17 @@ func handleIPv6(veth *network.Veth, payload []byte) {
 }
 
 func handleIPv4(veth *network.Veth, payload []byte) {
-	_, _ = veth, payload
-	veth.Logger.Debug("TODO: decode ipv4")
+	p, err := network.ParseIPv4Pack(payload, veth.PeerIP)
+	if err != nil {
+		veth.Logger.Error("failed to parse IPv4 packet", "err", err)
+	}
+
+	switch p.Protocol {
+	case network.ICMPProtocol:
+		veth.Logger.Debug("TODO: handle ICMP protocol")
+	default:
+		veth.Logger.Warn("Only ICMP protocol is managed currently")
+	}
 }
 
 func handleARP(veth *network.Veth, payload []byte) {
@@ -181,7 +192,7 @@ func handleARP(veth *network.Veth, payload []byte) {
 		return
 	}
 
-	reply, err2 := network.HandleARP(veth.Logger, payload, peerIface.HardwareAddr, veth.PeerIP)
+	reply, err2 := network.ParseARP(payload, peerIface.HardwareAddr, veth.PeerIP)
 	if err2 != nil {
 		veth.Logger.Error("ARP request not handled", "err", err2)
 		return
@@ -191,7 +202,7 @@ func handleARP(veth *network.Veth, payload []byte) {
 	ethFrame := network.BuildEthernetFrame(reply.TargetHA, reply.SenderHA, network.EtherTypeARP, arpPayload)
 
 	// TODO: better handling of veth.SAddr, currently we don't check if it is nil, but we
-	// maybe need to add a method to send it in ethernet.go
+	//       maybe need to add a method to send it in ethernet.go
 	if err := unix.Sendto(veth.FD, ethFrame, 0, veth.SAddr); err != nil {
 		veth.Logger.Error("failed to send ARP reply", "err", err)
 	} else {
@@ -199,6 +210,8 @@ func handleARP(veth *network.Veth, payload []byte) {
 	}
 }
 
+// ------------------------------------------------------------------------------
+// READ ARGUMENTS
 type Args struct {
 	vethName  string
 	hostIPStr string

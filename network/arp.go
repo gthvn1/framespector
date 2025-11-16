@@ -3,7 +3,6 @@ package network
 import (
 	"encoding/binary"
 	"fmt"
-	"log/slog"
 	"net"
 )
 
@@ -52,7 +51,7 @@ type ARPPacket struct {
 	TargetPA net.IP           // Target protocol address
 }
 
-func HandleARP(logger *slog.Logger, payload []byte, ourMAC net.HardwareAddr, ourIP net.IP) (*ARPPacket, error) {
+func ParseARP(payload []byte, ourMAC net.HardwareAddr, ourIP net.IP) (*ARPPacket, error) {
 	p, err := parseARP(payload)
 	if err != nil {
 		return nil, err
