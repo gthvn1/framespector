@@ -145,33 +145,11 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			// Dispatch based on the ethernet type
 			switch f.EtherType {
 			case network.EtherTypeARP:
-				peerIface, err1 := net.InterfaceByName(veth.PeerName)
-				if err1 != nil {
-					veth.Logger.Error("failed to peer interface", "iface", veth.PeerName, "err", err1)
-					continue
-				}
-
-				reply, err2 := network.HandleARP(veth.Logger, f.Payload, peerIface.HardwareAddr, veth.PeerIP)
-				if err2 != nil {
-					veth.Logger.Error("ARP request not handled", "err", err2)
-					continue
-				}
-
-				arpPayload := reply.Marshal()
-				ethFrame := network.BuildEthernetFrame(reply.TargetHA, reply.SenderHA, network.EtherTypeARP, arpPayload)
-
-				// TODO: better handling of veth.SAddr, currently we don't check if it is nil, but we
-				// maybe need to add a method to send it in ethernet.go
-				if err := unix.Sendto(veth.FD, ethFrame, 0, veth.SAddr); err != nil {
-					veth.Logger.Error("failed to send ARP reply", "err", err)
-				} else {
-					veth.Logger.Info("sent ARP reply", "to_mac", reply.TargetHA.String(), "from_mac", reply.SenderHA.String())
-				}
-
+				handleARP(veth, f.Payload)
 			case network.EtherTypeIPv4:
-				veth.Logger.Debug("TODO: decode ipv4")
+				handleIPv4(veth, f.Payload)
 			case network.EtherTypeIPv6:
-				veth.Logger.Debug("TODO: decode ipv6")
+				handleIPv6(veth, f.Payload)
 			case network.EtherTypeVLAN:
 				veth.Logger.Debug("VLAN frame ignored")
 			case network.EtherTypeUnknown:
@@ -181,13 +159,48 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 				// don't handle it here.
 				panic(fmt.Sprintf("unhandled EtherType in switch: 0x%04x", f.EtherType))
 			}
-
 		}
 	}
 }
 
+func handleIPv6(veth *network.Veth, payload []byte) {
+	_, _ = veth, payload
+	veth.Logger.Debug("TODO: decode ipv6")
+
+}
+
+func handleIPv4(veth *network.Veth, payload []byte) {
+	_, _ = veth, payload
+	veth.Logger.Debug("TODO: decode ipv4")
+}
+
+func handleARP(veth *network.Veth, payload []byte) {
+	peerIface, err1 := net.InterfaceByName(veth.PeerName)
+	if err1 != nil {
+		veth.Logger.Error("failed to peer interface", "iface", veth.PeerName, "err", err1)
+		return
+	}
+
+	reply, err2 := network.HandleARP(veth.Logger, payload, peerIface.HardwareAddr, veth.PeerIP)
+	if err2 != nil {
+		veth.Logger.Error("ARP request not handled", "err", err2)
+		return
+	}
+
+	arpPayload := reply.Marshal()
+	ethFrame := network.BuildEthernetFrame(reply.TargetHA, reply.SenderHA, network.EtherTypeARP, arpPayload)
+
+	// TODO: better handling of veth.SAddr, currently we don't check if it is nil, but we
+	// maybe need to add a method to send it in ethernet.go
+	if err := unix.Sendto(veth.FD, ethFrame, 0, veth.SAddr); err != nil {
+		veth.Logger.Error("failed to send ARP reply", "err", err)
+	} else {
+		veth.Logger.Info("sent ARP reply", "to_mac", reply.TargetHA.String(), "from_mac", reply.SenderHA.String())
+	}
+}
+
 type Args struct {
-	vethName string
+	vethName  string
 	hostIPStr string
 	peerIPStr string
 }
@@ -220,7 +233,7 @@ func ReadArgs() *Args {
 	}
 
 	return &Args{
-		vethName: *vethName,
+		vethName:  *vethName,
 		hostIPStr: *hostIP,
 		peerIPStr: *peerIP,
 	}
