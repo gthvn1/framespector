@@ -13,7 +13,9 @@ type Veth struct {
 	P1name string
 	P2name string
 	IP     string
+	PIP    string
 	FD     int
+	SAddr  *unix.SockaddrLinklayer
 	Logger *slog.Logger
 }
 
@@ -23,12 +25,14 @@ func htons(i uint16) uint16 {
 	return (i<<8 | i>>8)
 }
 
-func NewVeth(logger *slog.Logger, name string, ip string) *Veth {
+func NewVeth(logger *slog.Logger, name string, ip string, peerip string) *Veth {
 	return &Veth{
 		P1name: name,
 		P2name: name + "-peer",
 		IP:     ip,
+		PIP:    peerip,
 		FD:     -1,
+		SAddr:  nil,
 		Logger: logger,
 	}
 }
@@ -109,6 +113,8 @@ func (v *Veth) BindPeer() error {
 		Protocol: htons(unix.ETH_P_ALL),
 		Ifindex:  iface.Index,
 	}
+
+	v.SAddr = sll
 
 	if err := unix.Bind(v.FD, sll); err != nil {
 		return fmt.Errorf("failed to bind socket: %w", err)
