@@ -63,7 +63,7 @@ func HandleARP(logger *slog.Logger, payload []byte, ourMAC net.HardwareAddr, our
 	}
 
 	if !p.TargetPA.Equal(ourIP) {
-		return nil, fmt.Errorf("IP is not matching")
+		return nil, fmt.Errorf("IP %s is not matching %s", ourIP.String(), p.TargetPA.String())
 	}
 
 	reply := &ARPPacket{

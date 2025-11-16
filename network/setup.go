@@ -10,13 +10,15 @@ import (
 )
 
 type Veth struct {
-	P1name string
-	P2name string
-	IP     string
-	PIP    string
-	FD     int
-	SAddr  *unix.SockaddrLinklayer
-	Logger *slog.Logger
+	HostName string
+	PeerName string
+	HostIP   net.IP
+	HostNet  *net.IPNet
+	PeerIP   net.IP
+	PeerNet  *net.IPNet
+	FD       int
+	SAddr    *unix.SockaddrLinklayer
+	Logger   *slog.Logger
 }
 
 // htons() function converts the unsigned short integer "hostshort"
@@ -25,21 +27,48 @@ func htons(i uint16) uint16 {
 	return (i<<8 | i>>8)
 }
 
-func NewVeth(logger *slog.Logger, name string, ip string, peerip string) *Veth {
-	return &Veth{
-		P1name: name,
-		P2name: name + "-peer",
-		IP:     ip,
-		PIP:    peerip,
-		FD:     -1,
-		SAddr:  nil,
-		Logger: logger,
+func stringToIPv4(ipStr string) (net.IP, *net.IPNet, error) {
+	ip, ipNet, err := net.ParseCIDR(ipStr)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid IPv4 %s: %w", ipStr, err)
 	}
+
+	ipv4 := ip.To4()
+	if ipv4 == nil {
+		return nil, nil, fmt.Errorf("invalid IPv4 %s", ipStr)
+	}
+
+	return ipv4, ipNet, nil
+}
+
+func NewVeth(logger *slog.Logger, name string, host string, peer string) (*Veth, error) {
+
+	HostIP, HostNet, err1 := stringToIPv4(host)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	PeerIP, PeerNet, err2 := stringToIPv4(peer)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	return &Veth{
+		HostName: name,
+		PeerName: name + "-peer",
+		HostIP:   HostIP,
+		HostNet:  HostNet,
+		PeerIP:   PeerIP,
+		PeerNet:  PeerNet,
+		FD:       -1,
+		SAddr:    nil,
+		Logger:   logger,
+	}, nil
 }
 
 // On Linux: man veth
 func (v *Veth) Setup() error {
-	cmd := exec.Command("ip", "link", "add", v.P1name, "type", "veth", "peer", "name", v.P2name)
+	cmd := exec.Command("ip", "link", "add", v.HostName, "type", "veth", "peer", "name", v.PeerName)
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run command %q, error: %w, output: %s", cmd.String(), err, output)
@@ -47,19 +76,19 @@ func (v *Veth) Setup() error {
 
 	// Just return in case of error when setting links up.
 
-	if exec.Command("ip", "link", "set", v.P1name, "up").Run() != nil {
+	if exec.Command("ip", "link", "set", v.HostName, "up").Run() != nil {
 		v.Cleanup()
-		return fmt.Errorf("failed to set link %s up", v.P1name)
+		return fmt.Errorf("failed to set link %s up", v.HostName)
 	}
 
-	if exec.Command("ip", "link", "set", v.P2name, "up").Run() != nil {
+	if exec.Command("ip", "link", "set", v.PeerName, "up").Run() != nil {
 		v.Cleanup()
-		return fmt.Errorf("failed to set link %s up", v.P2name)
+		return fmt.Errorf("failed to set link %s up", v.PeerName)
 	}
 
-	if exec.Command("ip", "addr", "add", v.IP, "dev", v.P1name).Run() != nil {
+	if exec.Command("ip", "addr", "add", v.HostNet.String(), "dev", v.HostName).Run() != nil {
 		v.Cleanup()
-		return fmt.Errorf("failed to add %s to %s", v.IP, v.P1name)
+		return fmt.Errorf("failed to add %s to %s", v.HostNet.String(), v.HostName)
 	}
 
 	return nil
@@ -67,12 +96,12 @@ func (v *Veth) Setup() error {
 
 func (v *Veth) Cleanup() {
 	// Just report failure and continue
-	if exec.Command("ip", "link", "set", v.P1name, "down").Run() != nil {
-		v.Logger.Error("failed to set link down", "veth", v.P1name)
+	if exec.Command("ip", "link", "set", v.HostName, "down").Run() != nil {
+		v.Logger.Error("failed to set link down", "veth", v.HostName)
 	}
 
-	if exec.Command("ip", "link", "del", v.P1name).Run() != nil {
-		v.Logger.Error("failed to delete link", "veth", v.P1name)
+	if exec.Command("ip", "link", "del", v.HostName).Run() != nil {
+		v.Logger.Error("failed to delete link", "veth", v.HostName)
 	}
 
 	if v.FD >= 0 {
@@ -103,7 +132,7 @@ func (v *Veth) BindPeer() error {
 		return fmt.Errorf("socket is not created")
 	}
 
-	iface, err := net.InterfaceByName(v.P2name)
+	iface, err := net.InterfaceByName(v.PeerName)
 	if err != nil {
 		return fmt.Errorf("failed to get peer interface: %w", err)
 	}
@@ -120,6 +149,6 @@ func (v *Veth) BindPeer() error {
 		return fmt.Errorf("failed to bind socket: %w", err)
 	}
 
-	v.Logger.Debug("bind done", "iface", v.P2name)
+	v.Logger.Debug("bind done", "iface", v.PeerName)
 	return nil
 }

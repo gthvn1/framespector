@@ -26,7 +26,11 @@ func main() {
 		return
 	}
 
-	veth := network.NewVeth(logger, args.Veth, args.P1IP, args.P2IP)
+	veth, err := network.NewVeth(logger, args.Veth, args.P1IP, args.P2IP)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 
 	if err := veth.Setup(); err != nil {
 		logger.Error(err.Error())
@@ -42,6 +46,11 @@ func main() {
 	if err := veth.BindPeer(); err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
+	}
+
+	// At this point all fields of Veth are initialized
+	if veth.SAddr == nil {
+		panic("At this point SAddr should be initialized")
 	}
 
 	logger.Info("Setup network done")
@@ -130,29 +139,15 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			// Dispatch based on the ethernet type
 			switch f.EtherType {
 			case network.EtherTypeARP:
-				// TODO: deal with response
-				// TODO: get the ip of the peer in the parameter
-				peerIP, _, err1 := net.ParseCIDR(veth.PIP)
+				peerIface, err1 := net.InterfaceByName(veth.PeerName)
 				if err1 != nil {
-					veth.Logger.Error("invalid IP", "ip", veth.PIP, "err", err1)
+					veth.Logger.Error("failed to peer interface", "iface", veth.PeerName, "err", err1)
 					continue
 				}
 
-				peerIPv4 := peerIP.To4()
-				if peerIPv4 == nil {
-					veth.Logger.Error("invalid IP", "ip", veth.PIP)
-					continue
-				}
-
-				peerIface, err2 := net.InterfaceByName(veth.P2name)
+				reply, err2 := network.HandleARP(veth.Logger, f.Payload, peerIface.HardwareAddr, veth.PeerIP)
 				if err2 != nil {
-					veth.Logger.Error("failed to peer interface", "iface", veth.P2name, "err", err2)
-					continue
-				}
-
-				reply, err3 := network.HandleARP(veth.Logger, f.Payload, peerIface.HardwareAddr, peerIPv4)
-				if err3 != nil {
-					veth.Logger.Error("ARP request not handled", "err", err3)
+					veth.Logger.Error("ARP request not handled", "err", err2)
 					continue
 				}
 
@@ -164,7 +159,7 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 				if err := unix.Sendto(veth.FD, ethFrame, 0, veth.SAddr); err != nil {
 					veth.Logger.Error("failed to send ARP reply", "err", err)
 				} else {
-					veth.Logger.Info("sent ARP reply", "to_mac", reply.TargetHA, "from_mac", reply.SenderHA)
+					veth.Logger.Info("sent ARP reply", "to_mac", reply.TargetHA.String(), "from_mac", reply.SenderHA.String())
 				}
 
 			case network.EtherTypeIPv4:
