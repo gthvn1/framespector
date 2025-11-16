@@ -14,20 +14,26 @@ to program in Go.
 - Currently we only print raw frame but you should see ARP if you do `arping -c 192.168.35.3`
 
 ```
-# sudo ./framespector
-time=2025-11-15T17:39:03.434+01:00 level=DEBUG msg="Virtual pair socket created"
-time=2025-11-15T17:39:03.438+01:00 level=DEBUG msg="Bind done" iface=veth0-peer
-time=2025-11-15T17:39:03.438+01:00 level=INFO msg="Setup network done"
-time=2025-11-15T17:39:08.450+01:00 level=INFO msg="frame received" bytes=42
---------- RAW FRAME ---------
-ff ff ff ff ff ff 1a a0 bb c8
-a5 97 08 06 00 01 08 00 06 04
-00 01 1a a0 bb c8 a5 97 c0 a8
+❯ sudo ./framespector
+time=2025-11-16T11:21:09.187+01:00 level=DEBUG msg="proto set" proto=768
+time=2025-11-16T11:21:09.191+01:00 level=DEBUG msg="virtual pair socket created"
+time=2025-11-16T11:21:09.199+01:00 level=DEBUG msg="bind done" iface=veth0-peer
+time=2025-11-16T11:21:09.199+01:00 level=INFO msg="Setup network done"
+time=2025-11-16T11:21:09.201+01:00 level=INFO msg="Hit ctrl-c to quit"
+time=2025-11-16T11:21:09.201+01:00 level=INFO msg="frame received" bytes=102
+time=2025-11-16T11:21:09.202+01:00 level=DEBUG msg="Ethernet: 52:54:00:91:ca:aa -> 52:54:00:38:0e:fe, Type: IPv4, Payload: 88 bytes"
+time=2025-11-16T11:21:11.033+01:00 level=INFO msg="frame received" bytes=42
+--------- ARP FRAME ---------
+ff ff ff ff ff ff 32 f5 c9 0d
+d7 15 08 06 00 01 08 00 06 04
+00 01 32 f5 c9 0d d7 15 c0 a8
 23 02 ff ff ff ff ff ff c0 a8
 23 03
 -----------------------------
-^Ctime=2025-11-15T17:39:20.775+01:00 level=INFO msg="ctrl-c received, shutting down..."
-time=2025-11-15T17:39:20.866+01:00 level=INFO msg="clean shutdown complete"
+time=2025-11-16T11:21:11.035+01:00 level=DEBUG msg="Ethernet: 32:f5:c9:0d:d7:15 -> ff:ff:ff:ff:ff:ff, Type: ARP, Payload: 28 bytes"
+^Ctime=2025-11-16T11:21:14.007+01:00 level=INFO msg="ctrl-c received, shutting down..."
+time=2025-11-16T11:21:14.012+01:00 level=INFO msg="stop receiving frame"
+time=2025-11-16T11:21:14.012+01:00 level=INFO msg="clean shutdown complete"
 ```
 
 ## Tools we are using
