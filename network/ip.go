@@ -77,7 +77,7 @@ type IPv4Packet struct {
 	Payload []byte
 }
 
-func ParseIPv4Pack(payload []byte, ourIP net.IP) (*IPv4Packet, error) {
+func ParseIPv4Packet(payload []byte, ourIP net.IP) (*IPv4Packet, error) {
 	if len(payload) < 20 {
 		return nil, fmt.Errorf("IPv4 packet too short: %d bytes (minimum 20)", len(payload))
 	}

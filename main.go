@@ -172,14 +172,26 @@ func handleIPv6(veth *network.Veth, payload []byte) {
 }
 
 func handleIPv4(veth *network.Veth, payload []byte) {
-	p, err := network.ParseIPv4Pack(payload, veth.PeerIP)
+	p, err := network.ParseIPv4Packet(payload, veth.PeerIP)
 	if err != nil {
 		veth.Logger.Error("failed to parse IPv4 packet", "err", err)
+		return
 	}
 
 	switch p.Protocol {
 	case network.ICMPProtocol:
-		veth.Logger.Debug("TODO: handle ICMP protocol")
+		icmp, err := network.ParseICMP(p)
+		if err != nil {
+			veth.Logger.Error("failed to parse ICMP packet", "err", err)
+			return
+		}
+
+		if icmp.Type != network.ICMPEchoRequest {
+			veth.Logger.Warn("only ICMP Echo request are handled")
+			return
+		}
+
+		veth.Logger.Warn("TODO: handle ICMP echo request")
 	default:
 		veth.Logger.Warn("Only ICMP protocol is managed currently")
 	}
