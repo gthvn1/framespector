@@ -51,8 +51,8 @@ type ARPPacket struct {
 	TargetPA net.IP           // Target protocol address
 }
 
-func ParseARP(payload []byte, ourMAC net.HardwareAddr, ourIP net.IP) (*ARPPacket, error) {
-	p, err := parseARP(payload)
+func parseARP(payload []byte, ourMAC net.HardwareAddr, ourIP net.IP) (*ARPPacket, error) {
+	p, err := parseARPPayload(payload)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func ParseARP(payload []byte, ourMAC net.HardwareAddr, ourIP net.IP) (*ARPPacket
 	return reply, nil
 }
 
-func (p *ARPPacket) Marshal() []byte {
+func (p *ARPPacket) marshal() []byte {
 	b := make([]byte, 8+int(p.HWLen)*2+int(p.PLen)*2)
 
 	binary.BigEndian.PutUint16(b[0:2], p.HWType)
@@ -113,7 +113,7 @@ func (p *ARPPacket) Marshal() []byte {
 	return b
 }
 
-func parseARP(payload []byte) (*ARPPacket, error) {
+func parseARPPayload(payload []byte) (*ARPPacket, error) {
 	// To get the operation we need at least 8 bytes
 	if len(payload) < 8 {
 		return nil, fmt.Errorf("ARP packet too small: need at least 8 bytes, got %d", len(payload))

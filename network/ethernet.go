@@ -71,12 +71,12 @@ func handleARP(peerName string, peerIP net.IP, payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to peer interface %s: %w", peerName, err1)
 	}
 
-	reply, err2 := ParseARP(payload, peerIface.HardwareAddr, peerIP)
+	reply, err2 := parseARP(payload, peerIface.HardwareAddr, peerIP)
 	if err2 != nil {
 		return nil, fmt.Errorf("ARP request not handled: %w", err2)
 	}
 
-	arpPayload := reply.Marshal()
+	arpPayload := reply.marshal()
 	return buildEthernetFrame(reply.TargetHA, reply.SenderHA, EtherTypeARP, arpPayload), nil
 }
 
@@ -132,11 +132,11 @@ func buildEthernetFrame(dst, src net.HardwareAddr, etherType EtherType, payload 
 	return frame
 }
 
-// String returns a human-readable representation
-func (f *EthernetFrame) String() string {
-	return fmt.Sprintf("Ethernet: %s -> %s, Type: %s, Payload: %d bytes",
-		f.SrcMAC, f.DestMAC, f.EtherType.string(), len(f.Payload))
-}
+// string returns a human-readable representation
+//func (f *EthernetFrame) string() string {
+//	return fmt.Sprintf("Ethernet: %s -> %s, Type: %s, Payload: %d bytes",
+//		f.SrcMAC, f.DestMAC, f.EtherType.string(), len(f.Payload))
+//}
 
 func printHex(buf []byte) {
 	for i := 0; i < len(buf); i += 10 {

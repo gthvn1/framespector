@@ -56,22 +56,22 @@ func parseICMP(packet *IPv4Packet) (*ICMPPacket, error) {
 	return p, nil
 }
 
-func (p *ICMPPacket) Marshal() []byte {
-	data := make([]byte, 8+len(p.Data))
-
-	data[0] = byte(p.Type)
-	data[1] = p.Code
-	binary.BigEndian.PutUint16(data[4:6], p.Identifier)
-	binary.BigEndian.PutUint16(data[6:8], p.SequenceNumber)
-	copy(data[8:], p.Data)
-
-	// compute checksum
-	binary.BigEndian.PutUint16(data[2:4], 0)
-	cs := checksum(data)
-	binary.BigEndian.PutUint16(data[2:4], cs)
-
-	return data
-}
+//func (p *ICMPPacket) marshal() []byte {
+//	data := make([]byte, 8+len(p.Data))
+//
+//	data[0] = byte(p.Type)
+//	data[1] = p.Code
+//	binary.BigEndian.PutUint16(data[4:6], p.Identifier)
+//	binary.BigEndian.PutUint16(data[6:8], p.SequenceNumber)
+//	copy(data[8:], p.Data)
+//
+//	// compute checksum
+//	binary.BigEndian.PutUint16(data[2:4], 0)
+//	cs := checksum(data)
+//	binary.BigEndian.PutUint16(data[2:4], cs)
+//
+//	return data
+//}
 
 func checksum(data []byte) uint16 {
 	var sum uint32
