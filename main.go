@@ -129,96 +129,23 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			}
 
 			if err != nil {
-				veth.Logger.Warn("receive error", "err", err)
+				veth.Logger.Error("receive error", "err", err)
 				continue
 			}
 
 			veth.Logger.Info("frame received", "bytes", n)
-			f, err := network.ParseEthernet(rawFrame[:n])
+
+			reply, err := network.ProcessFrame(veth, rawFrame[:n])
 			if err != nil {
-				veth.Logger.Error("failed to decode frame", "err", err)
+				veth.Logger.Error("failed to process frame", "err", err)
 				continue
 			}
 
-			veth.Logger.Debug(f.String())
-
-			// Dispatch based on the ethernet type
-			switch f.EtherType {
-			case network.EtherTypeARP:
-				handleARP(veth, f.Payload)
-			case network.EtherTypeIPv4:
-				handleIPv4(veth, f.Payload)
-			case network.EtherTypeIPv6:
-				handleIPv6(veth, f.Payload)
-			case network.EtherTypeVLAN:
-				veth.Logger.Debug("VLAN frame ignored")
-			case network.EtherTypeUnknown:
-				veth.Logger.Warn("unkown ether type", "type", fmt.Sprintf("0x%04x", f.EtherType))
-			default:
-				// If you are here it is because you modified the EtherType enum and you
-				// don't handle it here.
-				panic(fmt.Sprintf("unhandled EtherType in switch: 0x%04x", f.EtherType))
+			// veth.SAddr cannot be nil after setup initialization
+			if err := unix.Sendto(veth.FD, reply, 0, veth.SAddr); err != nil {
+				veth.Logger.Error("failed to send reply", "err", err)
 			}
 		}
-	}
-}
-
-// ------------------------------------------------------------------------------
-// ETHERNET FRAME HANDLERS
-func handleIPv6(veth *network.Veth, payload []byte) {
-	_, _ = veth, payload
-	veth.Logger.Debug("TODO: decode ipv6")
-
-}
-
-func handleIPv4(veth *network.Veth, payload []byte) {
-	p, err := network.ParseIPv4Packet(payload, veth.PeerIP)
-	if err != nil {
-		veth.Logger.Error("failed to parse IPv4 packet", "err", err)
-		return
-	}
-
-	switch p.Protocol {
-	case network.ICMPProtocol:
-		icmp, err := network.ParseICMP(p)
-		if err != nil {
-			veth.Logger.Error("failed to parse ICMP packet", "err", err)
-			return
-		}
-
-		if icmp.Type != network.ICMPEchoRequest {
-			veth.Logger.Warn("only ICMP Echo request are handled")
-			return
-		}
-
-		veth.Logger.Warn("TODO: handle ICMP echo request")
-	default:
-		veth.Logger.Warn("Only ICMP protocol is managed currently")
-	}
-}
-
-func handleARP(veth *network.Veth, payload []byte) {
-	peerIface, err1 := net.InterfaceByName(veth.PeerName)
-	if err1 != nil {
-		veth.Logger.Error("failed to peer interface", "iface", veth.PeerName, "err", err1)
-		return
-	}
-
-	reply, err2 := network.ParseARP(payload, peerIface.HardwareAddr, veth.PeerIP)
-	if err2 != nil {
-		veth.Logger.Error("ARP request not handled", "err", err2)
-		return
-	}
-
-	arpPayload := reply.Marshal()
-	ethFrame := network.BuildEthernetFrame(reply.TargetHA, reply.SenderHA, network.EtherTypeARP, arpPayload)
-
-	// TODO: better handling of veth.SAddr, currently we don't check if it is nil, but we
-	//       maybe need to add a method to send it in ethernet.go
-	if err := unix.Sendto(veth.FD, ethFrame, 0, veth.SAddr); err != nil {
-		veth.Logger.Error("failed to send ARP reply", "err", err)
-	} else {
-		veth.Logger.Info("sent ARP reply", "to_mac", reply.TargetHA.String(), "from_mac", reply.SenderHA.String())
 	}
 }
 

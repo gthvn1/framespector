@@ -65,6 +65,21 @@ type EthernetFrame struct {
 	Payload   []byte
 }
 
+func handleARP(peerName string, peerIP net.IP, payload []byte) ([]byte, error) {
+	peerIface, err1 := net.InterfaceByName(peerName)
+	if err1 != nil {
+		return nil, fmt.Errorf("failed to peer interface %s: %w", peerName, err1)
+	}
+
+	reply, err2 := ParseARP(payload, peerIface.HardwareAddr, peerIP)
+	if err2 != nil {
+		return nil, fmt.Errorf("ARP request not handled: %w", err2)
+	}
+
+	arpPayload := reply.Marshal()
+	return BuildEthernetFrame(reply.TargetHA, reply.SenderHA, EtherTypeARP, arpPayload), nil
+}
+
 func ParseEthernet(packet []byte) (*EthernetFrame, error) {
 	if len(packet) < 14 {
 		return nil, fmt.Errorf("packet too small: need at least 14 bytes, got %d", len(packet))
