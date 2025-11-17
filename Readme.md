@@ -17,6 +17,7 @@ explore how it feels to implement layers in Go.
   - Create a **veth0** virtual ethernet pair
   - Assign **192.168.35.2/24** to **veth0**
   - Listen for incoming frames on **veth0-peer**
+    - By default peer responds to arping **192.168.35.3**
 - Press `Ctrl-C` to quit, the virtual pair is cleaned up automatically.
 
 ```
