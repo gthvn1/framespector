@@ -5,7 +5,7 @@ import (
 )
 
 func ProcessFrame(veth *Veth, data []byte) ([]byte, error) {
-	f, err := ParseEthernet(data)
+	f, err := parseEthernet(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode data: %w", err)
 	}

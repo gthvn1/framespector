@@ -36,7 +36,7 @@ type ICMPPacket struct {
 	Data           []byte
 }
 
-func ParseICMP(packet *IPv4Packet) (*ICMPPacket, error) {
+func parseICMP(packet *IPv4Packet) (*ICMPPacket, error) {
 	// Minimal size is 8 bytes
 	payload := packet.Payload
 

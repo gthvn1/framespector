@@ -77,10 +77,10 @@ func handleARP(peerName string, peerIP net.IP, payload []byte) ([]byte, error) {
 	}
 
 	arpPayload := reply.Marshal()
-	return BuildEthernetFrame(reply.TargetHA, reply.SenderHA, EtherTypeARP, arpPayload), nil
+	return buildEthernetFrame(reply.TargetHA, reply.SenderHA, EtherTypeARP, arpPayload), nil
 }
 
-func ParseEthernet(packet []byte) (*EthernetFrame, error) {
+func parseEthernet(packet []byte) (*EthernetFrame, error) {
 	if len(packet) < 14 {
 		return nil, fmt.Errorf("packet too small: need at least 14 bytes, got %d", len(packet))
 	}
@@ -116,7 +116,7 @@ func ParseEthernet(packet []byte) (*EthernetFrame, error) {
 	return f, nil
 }
 
-func BuildEthernetFrame(dst, src net.HardwareAddr, etherType EtherType, payload []byte) []byte {
+func buildEthernetFrame(dst, src net.HardwareAddr, etherType EtherType, payload []byte) []byte {
 	frame := make([]byte, 14+len(payload))
 
 	// MAC addresses

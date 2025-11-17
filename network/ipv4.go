@@ -78,14 +78,14 @@ type IPv4Packet struct {
 }
 
 func handleIPv4(peerIP net.IP, payload []byte) ([]byte, error) {
-	p, err := ParseIPv4Packet(payload, peerIP)
+	p, err := parseIPv4Packet(payload, peerIP)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse IPv4 packet: %w", err)
 	}
 
 	switch p.Protocol {
 	case ICMPProtocol:
-		icmp, err := ParseICMP(p)
+		icmp, err := parseICMP(p)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse ICMP packet: %w", err)
 		}
@@ -100,7 +100,7 @@ func handleIPv4(peerIP net.IP, payload []byte) ([]byte, error) {
 	}
 }
 
-func ParseIPv4Packet(payload []byte, ourIP net.IP) (*IPv4Packet, error) {
+func parseIPv4Packet(payload []byte, ourIP net.IP) (*IPv4Packet, error) {
 	if len(payload) < 20 {
 		return nil, fmt.Errorf("IPv4 packet too short: %d bytes (minimum 20)", len(payload))
 	}
