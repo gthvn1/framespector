@@ -140,7 +140,7 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 			if err != nil {
 				var todo *network.ToDoWarning
 				if errors.As(err, &todo) {
-					veth.Logger.Warn(todo.Msg, "type", todo.EtherType)
+					veth.Logger.Warn("todo", "msg", todo.Msg, "type", todo.EtherType)
 				} else {
 					veth.Logger.Error("failed to process frame", "err", err)
 				}
