@@ -30,9 +30,7 @@ func ProcessFrame(veth *Veth, data []byte) ([]byte, error) {
 		return handleIPv4(veth.PeerIP, f.Payload)
 	case EtherTypeIPv6:
 		return handleIPv6(f.Payload)
-	case EtherTypeVLAN:
-		fallthrough
-	case EtherTypeUnknown:
+	case EtherTypeVLAN, EtherTypeUnknown:
 		return nil, &ToDoWarning{Msg: "should we handle this", EtherType: f.EtherType}
 	default:
 		// If you are here it is because you modified the EtherType enum and you
