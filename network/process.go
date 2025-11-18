@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-var DecodeDataError = errors.New("failed to decode data")
+var ErrDecodeData = errors.New("failed to decode data")
 
 type ToDoWarning struct {
 	Msg       string
@@ -19,7 +19,7 @@ func (e *ToDoWarning) Error() string {
 func ProcessFrame(veth *Veth, data []byte) ([]byte, error) {
 	f, err := parseEthernet(data)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", DecodeDataError, err)
+		return nil, fmt.Errorf("%w: %s", ErrDecodeData, err)
 	}
 
 	// Dispatch based on the ethernet type
