@@ -43,15 +43,15 @@ func parseEtherType(v uint16) EtherType {
 func (e EtherType) string() string {
 	switch e {
 	case EtherTypeIPv4:
-		return "IPv4"
+		return fmt.Sprintf("IPv4 (0x%04X)", uint16(e))
 	case EtherTypeARP:
-		return "ARP"
+		return fmt.Sprintf("ARP (0x%04X)", uint16(e))
 	case EtherTypeIPv6:
-		return "IPv6"
+		return fmt.Sprintf("IPv6 (0x%04X)", uint16(e))
 	case EtherTypeVLAN:
-		return "VLAN"
+		return fmt.Sprintf("VLAN (0x%04X)", uint16(e))
 	case EtherTypeUnknown:
-		return "Unknown"
+		return fmt.Sprint("Custom Unknown (0x%04X)", uint16(e))
 	default:
 		return fmt.Sprintf("0x%04X", uint16(e))
 	}

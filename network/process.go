@@ -1,31 +1,42 @@
 package network
 
 import (
+	"errors"
 	"fmt"
 )
+
+var DecodeDataError = errors.New("failed to decode data")
+
+type ToDoWarning struct {
+	Msg       string
+	EtherType EtherType
+}
+
+func (e *ToDoWarning) Error() string {
+	return fmt.Sprintf("todo: %s for %s", e.Msg, e.EtherType.string())
+}
 
 func ProcessFrame(veth *Veth, data []byte) ([]byte, error) {
 	f, err := parseEthernet(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode data: %w", err)
+		return nil, fmt.Errorf("%w: %s", DecodeDataError, err)
 	}
 
 	// Dispatch based on the ethernet type
 	switch f.EtherType {
 	case EtherTypeARP:
-		handleARP(veth.PeerName, veth.PeerIP, f.Payload)
+		return handleARP(veth.PeerName, veth.PeerIP, f.Payload)
 	case EtherTypeIPv4:
-		handleIPv4(veth.PeerIP, f.Payload)
+		return handleIPv4(veth.PeerIP, f.Payload)
 	case EtherTypeIPv6:
 		return handleIPv6(f.Payload)
 	case EtherTypeVLAN:
-		return nil, fmt.Errorf("VLAN frame ignored")
+		fallthrough
 	case EtherTypeUnknown:
-		return nil, fmt.Errorf("unkown ether type %s", fmt.Sprintf("0x%04x", f.EtherType))
+		return nil, &ToDoWarning{Msg: "should we handle this", EtherType: f.EtherType}
 	default:
 		// If you are here it is because you modified the EtherType enum and you
 		// don't handle it here.
-		panic(fmt.Sprintf("unhandled EtherType in switch: 0x%04x", f.EtherType))
+		panic(fmt.Sprintf("unhandled EtherType in switch: %s", f.EtherType.string()))
 	}
-	return nil, nil
 }

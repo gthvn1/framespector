@@ -1,10 +1,6 @@
 package network
 
-import (
-	"fmt"
-)
-
 func handleIPv6(payload []byte) ([]byte, error) {
 	_ = payload
-	return nil, fmt.Errorf("todo: decode ipv6")
+	return nil, &ToDoWarning{Msg: "handle IPv6 frame", EtherType: EtherTypeIPv6}
 }

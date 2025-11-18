@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -137,7 +138,12 @@ func receiveLoop(ctx context.Context, wg *sync.WaitGroup, veth *network.Veth) {
 
 			reply, err := network.ProcessFrame(veth, rawFrame[:n])
 			if err != nil {
-				veth.Logger.Error("failed to process frame", "err", err)
+				var todo *network.ToDoWarning
+				if errors.As(err, &todo) {
+					veth.Logger.Warn(todo.Msg, "type", todo.EtherType)
+				} else {
+					veth.Logger.Error("failed to process frame", "err", err)
+				}
 				continue
 			}
 
