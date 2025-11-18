@@ -13,7 +13,7 @@ type ToDoWarning struct {
 }
 
 func (e *ToDoWarning) Error() string {
-	return fmt.Sprintf("todo: %s for %s", e.Msg, e.EtherType.string())
+	return fmt.Sprintf("todo: %s for %s", e.Msg, e.EtherType.String())
 }
 
 func ProcessFrame(veth *Veth, data []byte) ([]byte, error) {
@@ -37,6 +37,6 @@ func ProcessFrame(veth *Veth, data []byte) ([]byte, error) {
 	default:
 		// If you are here it is because you modified the EtherType enum and you
 		// don't handle it here.
-		panic(fmt.Sprintf("unhandled EtherType in switch: %s", f.EtherType.string()))
+		panic(fmt.Sprintf("unhandled EtherType in switch: %s", f.EtherType.String()))
 	}
 }

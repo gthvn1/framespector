@@ -40,7 +40,7 @@ func parseEtherType(v uint16) EtherType {
 	}
 }
 
-func (e EtherType) string() string {
+func (e EtherType) String() string {
 	switch e {
 	case EtherTypeIPv4:
 		return fmt.Sprintf("IPv4 (0x%04X)", uint16(e))
